@@ -3,6 +3,13 @@
 NS_IMPL_ISUPPORTS1(nsNDNTransport,
                    nsITransport);
 
+nsNDNTransport::nsNDNTransport()
+    : mLock("nsNDNTransport.mLock"),
+      mNDN(nsnull),
+      mNDNref(0),
+      mNDNonline(false),
+      mInput(this) {
+}
 
 nsNDNTransport::~nsNDNTransport() {
 }
@@ -125,4 +132,24 @@ nsNDNTransport::GetQoSBits(PRUint8 *aQoSBits) {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+struct ndn*
+nsNDNTransport::GetNDN_Locked() {
+  // mNDN is not available to the streams while it's not oneline
+  if (!mNDNonline)
+    return nsnull;
+
+  if (mNDN)
+    mNDNref++;
+
+  return mNDN;
+}
+
+void
+nsNDNTransport::ReleaseNDN_Locked(struct ndn *fd) {
+  NS_ASSERTION(mNDN == fd, "wrong ndn");
+
+  if (--mNDNref == 0) {
+    // close ndn here
+  }
+}
 
