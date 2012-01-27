@@ -28,7 +28,7 @@ nsNDNChannel::BeginPumpingData() {
   nsCOMPtr<nsIChannel> channel;
 
   rv = OpenContentStream(true, getter_AddRefs(stream),
-                                  getter_AddRefs(channel));
+                         getter_AddRefs(channel));
 
   if (NS_FAILED(rv))
     return rv;
