@@ -25,24 +25,32 @@ public:
 
   // this method instructs the NDN transport to open a transport of a
   // given type(s) to the given name
-  nsresult Init(const char **socketTypes, PRUint32 typeCount);
+  nsresult Init(const char *ndnName, PRUint32 typeCount);
 
 private:
 
+  void NDN_Close();
+  void NDN_MakeTemplate(int allow_stale);
   //
   // mNDN access methods: called with mLock held.
   //
-  struct ndn *GetNDN_Locked();
-  void        ReleaseNDN_Locked(struct ndn *fd);
+  struct ccn *GetNDN_Locked();
+  void ReleaseNDN_Locked(struct ccn *ccnd);
 
 private:
 
-  Mutex              mLock;
-  struct ndn        *mNDN;
-  nsrefcnt           mNDNref;         // mNDN is closed when mFDref goes to zero
-  bool               mNDNonline;
+  Mutex                      mLock;
+  // connector to ccnd
+  struct ccn                *mNDN;
+  struct ccn_fetch          *mNDNfetch;
+  struct ccn_charbuf        *mNDNname;
+  struct ccn_charbuf        *mNDNtmpl;
+  struct ccn_fetch_stream   *mNDNstream;
 
-  nsNDNInputStream   mInput;
+  nsrefcnt                   mNDNref;   // mNDN is closed when mFDref goes to zero
+  bool                       mNDNonline;
+
+  nsNDNInputStream           mInput;
 
   friend class nsNDNInputStream;
 };

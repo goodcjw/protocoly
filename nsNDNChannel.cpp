@@ -234,9 +234,9 @@ nsNDNChannel::Open(nsIInputStream **result) {
 NS_IMETHODIMP
 nsNDNChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt) {
   // AsyncRead in old API?
-  //  return NS_ERROR_NOT_IMPLEMENTED;
   mListener = listener;
   mListenerContext = ctxt;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP

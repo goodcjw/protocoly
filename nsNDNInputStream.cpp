@@ -2,12 +2,14 @@
 
 #include "nsNDNInputStream.h"
 #include "nsNDNTransport.h"
+#include "nsNDNError.h"
 
 using namespace mozilla;
 
 NS_IMPL_QUERY_INTERFACE2(nsNDNInputStream,
                          nsIInputStream,
                          nsIAsyncInputStream);
+
 
 nsNDNInputStream::nsNDNInputStream(nsNDNTransport* trans)
     : mTransport(trans)
@@ -57,7 +59,51 @@ nsNDNInputStream::Available(PRUint32 *avail) {
 
 NS_IMETHODIMP
 nsNDNInputStream::Read(char *buf, PRUint32 count, PRUint32 *countRead) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  int res;
+
+  //  return NS_ERROR_NOT_IMPLEMENTED;
+  *countRead = 0;
+
+  struct ccn *ccnd;
+  {
+    MutexAutoLock lock(mTransport->mLock);
+
+    // TODO: how this works?
+    if (NS_FAILED(mCondition))
+      return (mCondition == NS_BASE_STREAM_CLOSED) ? NS_OK : mCondition;
+
+    ccnd = mTransport->GetNDN_Locked();
+    if (!ccnd)
+      return NS_BASE_STREAM_WOULD_BLOCK;
+  }
+
+  // Actually reading process
+  if (NULL == mTransport->mNDNstream)
+    return NS_ERROR_CCND_STREAM_UNAVAIL;
+
+ 
+  res = ccn_fetch_read(mTransport->mNDNstream, buf, count);
+ 
+  nsresult rv;
+  {
+    MutexAutoLock lock(mTransport->mLock);
+    mTransport->ReleaseNDN_Locked(ccnd);
+
+    if (res > 0) {
+      mByteCount += (*countRead = res);
+    } else if (res == CCN_FETCH_READ_END) {
+      // CCN_FETCH_READ_END is 0
+      // Do nothing
+    } else {
+      // res < 0
+      // possible errors
+      //    CCN_FETCH_READ_NONE
+      //    CCN_FETCH_READ_TIMEOUT
+      mCondition = ErrorAccordingToCCND(res);
+    }
+    rv = mCondition;
+  }
+  return rv;
 }
 
 NS_IMETHODIMP

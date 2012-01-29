@@ -1,4 +1,5 @@
 #include "nsNDNTransport.h"
+#include "nsNDNError.h"
 
 NS_IMPL_ISUPPORTS1(nsNDNTransport,
                    nsITransport);
@@ -6,6 +7,10 @@ NS_IMPL_ISUPPORTS1(nsNDNTransport,
 nsNDNTransport::nsNDNTransport()
     : mLock("nsNDNTransport.mLock"),
       mNDN(nsnull),
+      mNDNfetch(nsnull),
+      mNDNname(nsnull),
+      mNDNtmpl(nsnull),
+      mNDNstream(nsnull),
       mNDNref(0),
       mNDNonline(false),
       mInput(this) {
@@ -14,9 +19,45 @@ nsNDNTransport::nsNDNTransport()
 nsNDNTransport::~nsNDNTransport() {
 }
 
-nsresult Init(const char **socketTypes, PRUint32 typeCount) {
+nsresult 
+nsNDNTransport::Init(const char *ndnName, PRUint32 typeCount) {
+  // the current implementation only allows one ccn name
+  int res;
+
+  // create ccn connection
+  mNDN = ccn_create();
+  res = ccn_connect(mNDN, NULL);
+  if (res < 0) {
+    ccn_destroy(&mNDN);
+    return NS_ERROR_CCND_UNAVAIL;
+  }
+
+  // create name buffer
+  mNDNname = ccn_charbuf_create();
+  mNDNname->length = 0;
+  res = ccn_name_from_uri(mNDNname, ndnName);
+  if (res < 0) {
+    ccn_destroy(&mNDN);
+    ccn_charbuf_destroy(&mNDNname);
+    return NS_ERROR_CCND_INVALID_NAME;
+  }
+
+  // initialize ccn fetch
+  mNDNfetch = ccn_fetch_new(mNDN);
+
+  // initialize interest template (mNDNtmpl)
+  NDN_MakeTemplate(0);
+
+  // initialize ccn stream
+  // XXX size of buffer is hard coded here, which must be wrong
+  // copied from ccnwget
+  // maxBufs = 4
+  // assumeFixed = 0
+  mNDNstream = ccn_fetch_open(mNDNfetch, mNDNname, ndnName, 
+                              mNDNtmpl, 4, CCN_V_HIGHEST, 0);
+
 }
-             
+
 NS_IMETHODIMP
 nsNDNTransport::OpenInputStream(PRUint32 flags,
                                 PRUint32 segsize,
@@ -132,7 +173,35 @@ nsNDNTransport::GetQoSBits(PRUint8 *aQoSBits) {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-struct ndn*
+void 
+nsNDNTransport::NDN_MakeTemplate(int allow_stale) {
+  mNDNtmpl = ccn_charbuf_create();
+  ccn_charbuf_append_tt(mNDNtmpl, CCN_DTAG_Interest, CCN_DTAG);
+  ccn_charbuf_append_tt(mNDNtmpl, CCN_DTAG_Name, CCN_DTAG);
+  ccn_charbuf_append_closer(mNDNtmpl); /* </Name> */
+  // XXX - use pubid if possible
+  ccn_charbuf_append_tt(mNDNtmpl, CCN_DTAG_MaxSuffixComponents, CCN_DTAG);
+  ccnb_append_number(mNDNtmpl, 1);
+  ccn_charbuf_append_closer(mNDNtmpl); /* </MaxSuffixComponents> */
+  if (allow_stale) {
+    ccn_charbuf_append_tt(mNDNtmpl, CCN_DTAG_AnswerOriginKind, CCN_DTAG);
+    ccnb_append_number(mNDNtmpl, CCN_AOK_DEFAULT | CCN_AOK_STALE);
+    ccn_charbuf_append_closer(mNDNtmpl); /* </AnswerOriginKind> */
+  }
+  ccn_charbuf_append_closer(mNDNtmpl); /* </Interest> */
+}
+
+void
+nsNDNTransport::NDN_Close() {
+  // XXX what if mNDNstream has not been initialized yet?
+  mNDNstream = ccn_fetch_close(mNDNstream);
+  mNDNfetch = ccn_fetch_destroy(mNDNfetch);
+  ccn_destroy(&mNDN);
+  ccn_charbuf_destroy(&mNDNname);
+  ccn_charbuf_destroy(&mNDNtmpl);
+}
+
+struct ccn*
 nsNDNTransport::GetNDN_Locked() {
   // mNDN is not available to the streams while it's not oneline
   if (!mNDNonline)
@@ -145,11 +214,12 @@ nsNDNTransport::GetNDN_Locked() {
 }
 
 void
-nsNDNTransport::ReleaseNDN_Locked(struct ndn *fd) {
-  NS_ASSERTION(mNDN == fd, "wrong ndn");
+nsNDNTransport::ReleaseNDN_Locked(struct ccn *ccnd) {
+  NS_ASSERTION(mNDN == ccnd, "wrong ndn");
 
   if (--mNDNref == 0) {
     // close ndn here
+    NDN_Close();
   }
 }
 
