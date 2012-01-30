@@ -4,6 +4,8 @@
 #include "nsNDNInputStream.h"
 
 #include "mozilla/Mutex.h"
+#include "nsIAsyncInputStream.h"
+#include "nsIAsyncOutputStream.h"
 #include "nsITransport.h"
 #include "nsISocketTransport.h"
 
@@ -49,6 +51,7 @@ private:
 
   nsrefcnt                   mNDNref;   // mNDN is closed when mFDref goes to zero
   bool                       mNDNonline;
+  bool                       mInputClosed;
 
   nsNDNInputStream           mInput;
 

@@ -1,3 +1,8 @@
+#include "nsNetSegmentUtils.h"
+#include "nsStreamUtils.h"
+
+#include "nsIPipe.h"
+
 #include "nsNDNTransport.h"
 #include "nsNDNError.h"
 
@@ -13,6 +18,7 @@ nsNDNTransport::nsNDNTransport()
       mNDNstream(nsnull),
       mNDNref(0),
       mNDNonline(false),
+      mInputClosed(true),
       mInput(this) {
 }
 
@@ -64,6 +70,31 @@ nsNDNTransport::OpenInputStream(PRUint32 flags,
                                 PRUint32 segsize,
                                 PRUint32 segcount,
                                 nsIInputStream **result) {
+  nsresult rv;
+  nsCOMPtr<nsIAsyncInputStream> pipeIn;
+
+  if (!(flags & OPEN_UNBUFFERED) || (flags & OPEN_BLOCKING)) {
+    bool openBlocking = (flags & OPEN_BLOCKING);
+
+    net_ResolveSegmentParams(segsize, segcount);
+    nsIMemory *segalloc = net_GetSegmentAlloc(segsize);
+
+    // create a pipe
+    nsCOMPtr<nsIAsyncOutputStream> pipeOut;
+    rv = NS_NewPipe2(getter_AddRefs(pipeIn), getter_AddRefs(pipeOut),
+                     !openBlocking, true, segsize, segcount, segalloc);
+    if (NS_FAILED(rv)) return rv;
+
+    *result = pipeIn;
+
+  } else {
+    *result = &mInput;
+  }
+
+  mInputClosed = false;
+
+  // Leave out SocketService's event handling
+  NS_ADDREF(*result);
   return NS_OK;
 }
 
@@ -200,6 +231,9 @@ nsNDNTransport::NDN_Close() {
   ccn_destroy(&mNDN);
   ccn_charbuf_destroy(&mNDNname);
   ccn_charbuf_destroy(&mNDNtmpl);
+
+  // TODO put the 'mInputClosed' into the right place
+  mInputClosed = true;
 }
 
 struct ccn_fetch_stream*
