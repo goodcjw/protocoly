@@ -31,3 +31,51 @@ nsNDNCore::Init(nsNDNChannel *channel) {
   //  URI can be access by mChannel->URI()
   return NS_OK;
 }
+
+//-----------------------------------------------------------------------------
+// nsIInputStream Methods
+
+NS_IMETHODIMP
+nsNDNCore::Close() {
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNDNCore::Available(PRUint32 *avail) {
+  // currently not being used
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNDNCore::Read(char *buf, PRUint32 count, PRUint32 *countRead) {
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNDNCore::ReadSegments(nsWriteSegmentFun writer, void *closure,
+                        PRUint32 count, PRUint32 *countRead) {
+  // NDN stream is unbuffered
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNDNCore::IsNonBlocking(bool *nonblocking) {
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+//-----------------------------------------------------------------------------
+// nsIAsyncInputStream Methods
+
+NS_IMETHODIMP
+nsNDNCore::CloseWithStatus(nsresult reason) {
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsNDNCore::AsyncWait(nsIInputStreamCallback *callback,
+                     PRUint32 flags,
+                     PRUint32 amount,
+                     nsIEventTarget *target) {
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+

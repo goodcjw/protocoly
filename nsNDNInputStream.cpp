@@ -119,7 +119,7 @@ nsNDNInputStream::IsNonBlocking(bool *nonblocking) {
 }
 
 //-----------------------------------------------------------------------------
-// nsIInputStream Methods
+// nsIAsyncInputStream Methods
 
 NS_IMETHODIMP
 nsNDNInputStream::CloseWithStatus(nsresult reason) {

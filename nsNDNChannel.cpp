@@ -278,14 +278,12 @@ nsNDNChannel::GetContentDispositionHeader(nsACString &aContentDispositionHeader)
 //-----------------------------------------------------------------------------
 // nsNDNChannel::nsIStreamListener
 
-/*
 NS_IMETHODIMP
 nsNDNChannel::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
                                nsIInputStream *stream, PRUint32 offset,
                                PRUint32 count) {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
-*/
 
 /*
 NS_IMETHODIMP
