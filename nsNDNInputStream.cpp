@@ -11,7 +11,6 @@ NS_IMPL_QUERY_INTERFACE2(nsNDNInputStream,
                          nsIInputStream,
                          nsIAsyncInputStream);
 
-
 nsNDNInputStream::nsNDNInputStream(nsNDNTransport* trans)
     : mTransport(trans)
     , mReaderRefCnt(0) {

@@ -7,7 +7,6 @@
 #include "nsIAsyncInputStream.h"
 #include "nsIAsyncOutputStream.h"
 #include "nsITransport.h"
-#include "nsISocketTransport.h"
 
 #include <ccn/ccn.h>
 #include <ccn/charbuf.h>
@@ -20,7 +19,6 @@ class nsNDNTransport : public nsITransport {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSITRANSPORT
-  NS_DECL_NSISOCKETTRANSPORT
 
   nsNDNTransport();
   virtual ~nsNDNTransport();

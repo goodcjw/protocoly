@@ -1,13 +1,16 @@
 #include "nsNDNChannel.h"
+#include "nsNDNCore.h"
+
 #include "nsILoadGroup.h"
 #include "nsIURL.h"
+
 #include <ccn/ccn.h>
 
 NS_IMPL_ISUPPORTS4(nsNDNChannel,
                    nsIChannel,
                    nsIRequest,
                    nsIStreamListener,
-                   nsIRequestObserver);
+                   nsIRequestObserver)
 
 nsNDNChannel::nsNDNChannel(nsIURI *aURI) {
   SetURI(aURI);
@@ -56,6 +59,21 @@ nsresult
 nsNDNChannel::OpenContentStream(bool async, nsIInputStream **stream,
                                 nsIChannel** channel) {
   // 
+  if (!async)
+    return NS_ERROR_NOT_IMPLEMENTED;
+
+  nsNDNCore *ndncore = new nsNDNCore();
+  if (!ndncore)
+    return NS_ERROR_OUT_OF_MEMORY;
+  NS_ADDREF(ndncore);
+
+  nsresult rv = ndncore->Init(this);
+  if (NS_FAILED(rv)) {
+    NS_RELEASE(ndncore);
+    return rv;
+  }
+
+  *stream = ndncore;
   return NS_OK;
 }
 
@@ -260,12 +278,14 @@ nsNDNChannel::GetContentDispositionHeader(nsACString &aContentDispositionHeader)
 //-----------------------------------------------------------------------------
 // nsNDNChannel::nsIStreamListener
 
+/*
 NS_IMETHODIMP
 nsNDNChannel::OnDataAvailable(nsIRequest *request, nsISupports *ctxt,
                                nsIInputStream *stream, PRUint32 offset,
                                PRUint32 count) {
   return NS_ERROR_NOT_IMPLEMENTED;
 }
+*/
 
 /*
 NS_IMETHODIMP
