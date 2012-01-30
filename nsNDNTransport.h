@@ -34,8 +34,8 @@ private:
   //
   // mNDN access methods: called with mLock held.
   //
-  struct ccn *GetNDN_Locked();
-  void ReleaseNDN_Locked(struct ccn *ccnd);
+  struct ccn_fetch_stream *GetNDN_Locked();
+  void ReleaseNDN_Locked(struct ccn_fetch_stream* ccnfs);
 
 private:
 

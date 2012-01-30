@@ -1,4 +1,5 @@
 #include "mozilla/Mutex.h"
+#include "nsStreamUtils.h"
 
 #include "nsNDNInputStream.h"
 #include "nsNDNTransport.h"
@@ -64,7 +65,7 @@ nsNDNInputStream::Read(char *buf, PRUint32 count, PRUint32 *countRead) {
   //  return NS_ERROR_NOT_IMPLEMENTED;
   *countRead = 0;
 
-  struct ccn *ccnd;
+  struct ccn_fetch_stream *ccnfs;
   {
     MutexAutoLock lock(mTransport->mLock);
 
@@ -72,22 +73,21 @@ nsNDNInputStream::Read(char *buf, PRUint32 count, PRUint32 *countRead) {
     if (NS_FAILED(mCondition))
       return (mCondition == NS_BASE_STREAM_CLOSED) ? NS_OK : mCondition;
 
-    ccnd = mTransport->GetNDN_Locked();
-    if (!ccnd)
+    ccnfs = mTransport->GetNDN_Locked();
+    if (!ccnfs)
       return NS_BASE_STREAM_WOULD_BLOCK;
   }
 
   // Actually reading process
-  if (NULL == mTransport->mNDNstream)
+  if (NULL == ccnfs)
     return NS_ERROR_CCND_STREAM_UNAVAIL;
 
- 
-  res = ccn_fetch_read(mTransport->mNDNstream, buf, count);
+  res = ccn_fetch_read(ccnfs, buf, count);
  
   nsresult rv;
   {
     MutexAutoLock lock(mTransport->mLock);
-    mTransport->ReleaseNDN_Locked(ccnd);
+    mTransport->ReleaseNDN_Locked(ccnfs);
 
     if (res > 0) {
       mByteCount += (*countRead = res);
@@ -146,6 +146,32 @@ nsNDNInputStream::AsyncWait(nsIInputStreamCallback *callback,
                             PRUint32 flags,
                             PRUint32 amount,
                             nsIEventTarget *target) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  // copied from nsSocketInputStream::AsyncWait
+  nsCOMPtr<nsIInputStreamCallback> directCallback;
+  {
+    MutexAutoLock lock(mTransport->mLock);
+
+    if (callback && target) {
+      nsCOMPtr<nsIInputStreamCallback> temp;
+      nsresult rv = NS_NewInputStreamReadyEvent(getter_AddRefs(temp),
+                                                callback, target);
+      if (NS_FAILED(rv)) return rv;
+      mCallback = temp;
+    }
+    else {
+      mCallback = callback;
+    }
+    
+    if (NS_FAILED(mCondition))
+      directCallback.swap(mCallback);
+    else
+      mCallbackFlags = flags;
+  }
+  if (directCallback)
+    directCallback->OnInputStreamReady(this);
+  else
+    return NS_ERROR_NOT_IMPLEMENTED;
+
+  return NS_OK;
 }
 

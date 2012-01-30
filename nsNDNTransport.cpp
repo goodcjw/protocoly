@@ -56,6 +56,7 @@ nsNDNTransport::Init(const char *ndnName, PRUint32 typeCount) {
   mNDNstream = ccn_fetch_open(mNDNfetch, mNDNname, ndnName, 
                               mNDNtmpl, 4, CCN_V_HIGHEST, 0);
 
+  mNDNonline = true;
 }
 
 NS_IMETHODIMP
@@ -201,21 +202,21 @@ nsNDNTransport::NDN_Close() {
   ccn_charbuf_destroy(&mNDNtmpl);
 }
 
-struct ccn*
+struct ccn_fetch_stream*
 nsNDNTransport::GetNDN_Locked() {
   // mNDN is not available to the streams while it's not oneline
   if (!mNDNonline)
     return nsnull;
 
-  if (mNDN)
+  if (mNDNstream)
     mNDNref++;
 
-  return mNDN;
+  return mNDNstream;
 }
 
 void
-nsNDNTransport::ReleaseNDN_Locked(struct ccn *ccnd) {
-  NS_ASSERTION(mNDN == ccnd, "wrong ndn");
+nsNDNTransport::ReleaseNDN_Locked(struct ccn_fetch_stream *ccnfs) {
+  NS_ASSERTION(mNDNstream == ccnfs, "wrong ndn");
 
   if (--mNDNref == 0) {
     // close ndn here
