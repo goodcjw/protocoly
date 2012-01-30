@@ -55,8 +55,9 @@ XPIDLSRCS = \
     $(NULL)
 
 CPPSRCS = \
-  nsNDNError.cpp \
   nsYProtocolHandler.cpp \
+  nsNDNError.cpp \
+  nsNDNCore.cpp \
   nsNDNChannel.cpp \
   nsNDNInputStream.cpp \
   nsNDNTransport.cpp \
