@@ -26,7 +26,7 @@ nsNDNTransport::~nsNDNTransport() {
 }
 
 nsresult 
-nsNDNTransport::Init(const char *ndnName, PRUint32 typeCount) {
+nsNDNTransport::Init(const char *ndnName) {
   // the current implementation only allows one ccn name
   int res;
 

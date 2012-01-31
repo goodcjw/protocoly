@@ -27,7 +27,7 @@ public:
 
   // this method instructs the NDN transport to open a transport of a
   // given type(s) to the given name
-  nsresult Init(const char *ndnName, PRUint32 typeCount);
+  nsresult Init(const char *ndnName);
 
 private:
 
