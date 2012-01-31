@@ -8,10 +8,12 @@
 #include "nsIAsyncOutputStream.h"
 #include "nsITransport.h"
 
+extern "C" {
 #include <ccn/ccn.h>
 #include <ccn/charbuf.h>
 #include <ccn/uri.h>
 #include <ccn/fetch.h>
+}
 
 class nsNDNTransport : public nsITransport {
   typedef mozilla::Mutex Mutex;
