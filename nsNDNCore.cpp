@@ -1,6 +1,8 @@
 #include "nsNDNCore.h"
 #include "nsNDNChannel.h"
 
+#include "nsStreamUtils.h"
+
 // nsBaseContentStream::nsISupports
 
 NS_IMPL_THREADSAFE_ADDREF(nsNDNCore)
@@ -16,7 +18,11 @@ NS_INTERFACE_MAP_END_THREADSAFE;
 nsNDNCore::nsNDNCore()
     : mChannel(nsnull)
     , mDataTransport(nsnull)
-    , mDataStream(nsnull) {
+    , mDataStream(nsnull)
+    , mStatus(NS_OK)
+    , mNonBlocking(true)
+    , mCallback(nsnull)
+    , mCallbackTarget(nsnull) {
 }
 
 nsNDNCore::~nsNDNCore() {
@@ -33,34 +39,64 @@ nsNDNCore::Init(nsNDNChannel *channel) {
 }
 
 //-----------------------------------------------------------------------------
+
+void
+nsNDNCore::DispatchCallback()
+{
+  if (!mCallback)
+    return;
+
+  // It's important to clear mCallback and mCallbackTarget up-front because the
+  // OnInputStreamReady implementation may call our AsyncWait method.
+  nsCOMPtr<nsIInputStreamCallback> callback;
+  NS_NewInputStreamReadyEvent(getter_AddRefs(callback), mCallback,
+                              mCallbackTarget);
+  if (!callback)
+    return;  // out of memory!
+  mCallback = nsnull;
+  mCallbackTarget = nsnull;
+
+  callback->OnInputStreamReady(this);
+}
+
+//-----------------------------------------------------------------------------
 // nsIInputStream Methods
 
 NS_IMETHODIMP
 nsNDNCore::Close() {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return IsClosed() ? NS_OK : CloseWithStatus(NS_BASE_STREAM_CLOSED);
 }
 
 NS_IMETHODIMP
 nsNDNCore::Available(PRUint32 *avail) {
-  // currently not being used
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *avail = 0;
+  return mStatus;
 }
 
 NS_IMETHODIMP
 nsNDNCore::Read(char *buf, PRUint32 count, PRUint32 *countRead) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return ReadSegments(NS_CopySegmentToBuffer, buf, count, countRead);
 }
 
 NS_IMETHODIMP
 nsNDNCore::ReadSegments(nsWriteSegmentFun writer, void *closure,
                         PRUint32 count, PRUint32 *countRead) {
-  // NDN stream is unbuffered
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *countRead = 0;
+
+  if (mStatus == NS_BASE_STREAM_CLOSED)
+    return NS_OK;
+
+  // No data yet
+  if (!IsClosed() && IsNonBlocking())
+    return NS_BASE_STREAM_WOULD_BLOCK;
+
+  return mStatus;
 }
 
 NS_IMETHODIMP
 nsNDNCore::IsNonBlocking(bool *nonblocking) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  *nonblocking = true;
+  return NS_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -68,7 +104,14 @@ nsNDNCore::IsNonBlocking(bool *nonblocking) {
 
 NS_IMETHODIMP
 nsNDNCore::CloseWithStatus(nsresult reason) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  if (IsClosed())
+    return NS_OK;
+
+  NS_ENSURE_ARG(NS_FAILED(reason));
+  mStatus = reason;
+
+  DispatchCallback();
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -76,6 +119,20 @@ nsNDNCore::AsyncWait(nsIInputStreamCallback *callback,
                      PRUint32 flags,
                      PRUint32 amount,
                      nsIEventTarget *target) {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  // Our _only_ consumer is nsInputStreamPump, so we simplify things here by
+  // making assumptions about how we will be called.
+  mCallback = callback;
+  mCallbackTarget = target;
+
+  if (!mCallback)
+    return NS_OK;
+
+  if (IsClosed()) {
+    DispatchCallback();
+    return NS_OK;
+  }
+
+  //  OnCallbackPending();
+  return NS_OK;
 }
 
