@@ -252,9 +252,22 @@ nsNDNChannel::Open(nsIInputStream **result) {
 NS_IMETHODIMP
 nsNDNChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt) {
   // AsyncRead in old API?
+  nsresult rv;
+
   mListener = listener;
   mListenerContext = ctxt;
-  return NS_ERROR_NOT_IMPLEMENTED;
+
+  rv = BeginPumpingData();
+  if (NS_FAILED(rv)) {
+    mPump = nsnull;
+    mListener = nsnull;
+    mListenerContext = nsnull;
+    mCallbacks = nsnull;
+    return rv;
+  }
+
+  // At this point, we are going to return success no mater what
+  return NS_OK;
 }
 
 NS_IMETHODIMP
