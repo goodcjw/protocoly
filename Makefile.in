@@ -61,6 +61,7 @@ CPPSRCS = \
   nsNDNChannel.cpp \
   nsNDNInputStream.cpp \
   nsNDNTransport.cpp \
+  nsNDNTransportService.cpp \
   $(NULL)
 
 LOCAL_INCLUDES = \

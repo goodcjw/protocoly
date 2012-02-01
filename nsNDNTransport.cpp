@@ -84,6 +84,8 @@ nsNDNTransport::OpenInputStream(PRUint32 flags,
     rv = NS_NewPipe2(getter_AddRefs(pipeIn), getter_AddRefs(pipeOut),
                      !openBlocking, true, segsize, segcount, segalloc);
     if (NS_FAILED(rv)) return rv;
+    //    rv = NS_AsyncCopy(&mInput, pipeOut, ???
+
 
     *result = pipeIn;
 
