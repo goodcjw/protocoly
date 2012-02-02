@@ -83,9 +83,12 @@ nsNDNCore::OnCallbackPending() {
     // aren't going to read from (or write to) the cache, then just proceed to
     // connect to the server.
     if (mState == NDN_INIT) {
+      // internally call OpenInputStream and refer it as mDataStream
+      // mDataStream is actually created by NS_NewPipe2
       mState = Connect();
     }
     if (mState == NDN_CONNECT && mDataStream) {
+      // this is a nsPipeOutputStream
       mDataStream->AsyncWait(this, 0, 0, CallbackTarget());
     }
 }
