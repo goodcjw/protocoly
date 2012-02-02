@@ -13,7 +13,10 @@ NS_IMPL_QUERY_INTERFACE2(nsNDNInputStream,
 
 nsNDNInputStream::nsNDNInputStream(nsNDNTransport* trans)
     : mTransport(trans)
-    , mReaderRefCnt(0) {
+    , mReaderRefCnt(0)
+    , mByteCount(0)
+    , mCondition(NS_OK)
+    , mCallbackFlags(0) {
 }
 
 nsNDNInputStream::~nsNDNInputStream() {
