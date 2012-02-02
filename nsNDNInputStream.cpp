@@ -84,27 +84,40 @@ nsNDNInputStream::Read(char *buf, PRUint32 count, PRUint32 *countRead) {
   if (NULL == ccnfs)
     return NS_ERROR_CCND_STREAM_UNAVAIL;
 
-  res = ccn_fetch_read(ccnfs, buf, count);
- 
+  // ccn_fetch_read is non-blocking, so we have to block it manually
+  // however, the bright side is that we don't need to move ccn_fetch_open
+  // here. It must be non-blocking as well.
+  //  res = ccn_fetch_read(ccnfs, buf, count);
+
   nsresult rv;
   {
     MutexAutoLock lock(mTransport->mLock);
-    mTransport->ReleaseNDN_Locked(ccnfs);
-
-    if (res > 0) {
-      mByteCount += (*countRead = res);
-    } else if (res == CCN_FETCH_READ_END) {
-      // CCN_FETCH_READ_END is 0
-      // Do nothing
-    } else {
-      // res < 0
-      // possible errors
-      //    CCN_FETCH_READ_NONE
-      //    CCN_FETCH_READ_TIMEOUT
-      mCondition = ErrorAccordingToCCND(res);
+    while ((res = ccn_fetch_read(ccnfs, buf, count)) != 0) {
+      if (res > 0) {
+        *countRead += res;
+      } else if (res == CCN_FETCH_READ_NONE) {
+        if (ccn_run(mTransport->mNDN, 1000) < 0) {
+          res = CCN_FETCH_READ_NONE;
+        }
+      } else if (res == CCN_FETCH_READ_TIMEOUT) {
+        ccn_reset_timeout(ccnfs);
+        if (ccn_run(mTransport->mNDN, 1000) < 0) {
+          res = CCN_FETCH_READ_NONE;
+          break;
+        }
+      } else {
+        // CCN_FETCH_READ_NONE
+        // CCN_FETCH_READ_END
+        // and other errors
+        break;
+      }
     }
-    rv = mCondition;
+    mTransport->ReleaseNDN_Locked(ccnfs);
   }
+
+  mCondition = ErrorAccordingToCCND(res);
+  mByteCount = *countRead;
+  rv = mCondition;
   return rv;
 }
 

@@ -5,6 +5,9 @@
 
 nsresult
 ErrorAccordingToCCND(int errorCode) {
+    if (errorCode >= 0)
+      return NS_OK;
+
     nsresult rv = NS_ERROR_FAILURE;
     switch (errorCode) {
       case CCN_FETCH_READ_NONE:
