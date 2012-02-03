@@ -63,7 +63,6 @@ private:
   NDN_STATE                           mState;
   nsresult                            mStatus;
   bool                                mNonBlocking;
-  bool                                mAvailable;
   nsCOMPtr<nsIInputStreamCallback>    mCallback;
   nsCOMPtr<nsIEventTarget>            mCallbackTarget;
 };

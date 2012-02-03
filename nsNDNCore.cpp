@@ -26,7 +26,6 @@ nsNDNCore::nsNDNCore()
     , mState(NDN_INIT)
     , mStatus(NS_OK)
     , mNonBlocking(true)
-    , mAvailable(false)
     , mCallback(nsnull)
     , mCallbackTarget(nsnull) {
 }
@@ -142,7 +141,12 @@ nsNDNCore::Close() {
 
 NS_IMETHODIMP
 nsNDNCore::Available(PRUint32 *avail) {
-  *avail = mAvailable;
+  // from nsFtpState
+  if (mDataStream)
+    return mDataStream->Available(avail);
+
+  // from nsBaseContentStream
+  *avail = 0;
   return mStatus;
 }
 
@@ -186,6 +190,17 @@ nsNDNCore::IsNonBlocking(bool *nonblocking) {
 
 NS_IMETHODIMP
 nsNDNCore::CloseWithStatus(nsresult reason) {
+  // from nsFtpState
+
+  if (mDataTransport) {
+    // Shutdown the data transport.
+    mDataTransport->Close(NS_ERROR_ABORT);
+    mDataTransport = nsnull;
+  }
+
+  mDataStream = nsnull;
+
+  // from nsBaseContentStream
   if (IsClosed())
     return NS_OK;
 
@@ -225,7 +240,6 @@ NS_IMETHODIMP
 nsNDNCore::OnInputStreamReady(nsIAsyncInputStream *aInStream) {
     // We are receiving a notification from our data stream, so just forward it
     // on to our stream callback.
-  mAvailable = true;
   if (HasPendingCallback())
     DispatchCallbackSync();
 
