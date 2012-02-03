@@ -9,6 +9,7 @@
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
 
+#include "nsHashPropertyBag.h"
 #include "nsInputStreamPump.h"
 #include "nsIProgressEventSink.h"
 #include "nsIInterfaceRequestor.h"
@@ -24,8 +25,9 @@
 
 //
 
-class nsNDNChannel : public nsIChannel,
-                     private nsIStreamListener {
+class nsNDNChannel : public nsIChannel
+                   , public nsHashPropertyBag
+                   , private nsIStreamListener {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSICHANNEL
@@ -52,6 +54,11 @@ public:
     // TODO
     return mPump;
   }
+
+  // Set the content length that should be reported for this channel.  Pass -1
+  // to indicate an unspecified content length.
+  void SetContentLength64(PRInt64 len);
+  PRInt64 ContentLength64();
 
 private:
   NS_DECL_NSISTREAMLISTENER
