@@ -26,6 +26,7 @@ nsNDNCore::nsNDNCore()
     , mState(NDN_INIT)
     , mStatus(NS_OK)
     , mNonBlocking(true)
+    , mAvailable(false)
     , mCallback(nsnull)
     , mCallbackTarget(nsnull) {
 }
@@ -141,7 +142,7 @@ nsNDNCore::Close() {
 
 NS_IMETHODIMP
 nsNDNCore::Available(PRUint32 *avail) {
-  *avail = 0;
+  *avail = mAvailable;
   return mStatus;
 }
 
@@ -153,6 +154,15 @@ nsNDNCore::Read(char *buf, PRUint32 count, PRUint32 *countRead) {
 NS_IMETHODIMP
 nsNDNCore::ReadSegments(nsWriteSegmentFun writer, void *closure,
                         PRUint32 count, PRUint32 *countRead) {
+
+  // from nsFtpState
+  if (mDataStream) {
+    nsWriteSegmentThunk thunk = { this, writer, closure };
+    return mDataStream->ReadSegments(NS_WriteSegmentThunk, &thunk,
+                                     count, countRead);
+  }
+
+  // from nsBaseContentStream
   *countRead = 0;
 
   if (mStatus == NS_BASE_STREAM_CLOSED)
@@ -215,9 +225,10 @@ NS_IMETHODIMP
 nsNDNCore::OnInputStreamReady(nsIAsyncInputStream *aInStream) {
     // We are receiving a notification from our data stream, so just forward it
     // on to our stream callback.
-    if (HasPendingCallback())
-        DispatchCallbackSync();
+  mAvailable = true;
+  if (HasPendingCallback())
+    DispatchCallbackSync();
 
-    return NS_OK;
+  return NS_OK;
 }
 
